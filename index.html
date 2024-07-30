@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <title>Text Generator</title>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+            <a class="navbar-brand" href="https://winvinaya.com/">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="WinVinaya Logo" style="height: 40px;">
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pricing</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+    <main class="container mt-4">
+        <section class="row">
+            <article class="col-md-6">
+                <h2>Image</h2>
+                <form id="uploadForm" action="{{ url_for('upload_image') }}" method="post" enctype="multipart/form-data">
+                    <div class="p-3 bg-light border scrollable img-container">
+                        <div id="uploadedImages">
+                            {% if image_urls %}
+                                <img src="{{ image_urls[current_index] }}" class="uploaded-img" id="currentImage">
+                            {% else %}
+                                <p>No images uploaded yet.</p>
+                            {% endif %}
+                        </div>
+                        <div class="upload-area" id="uploadArea">
+                            <p class="upload-text">Drag & Drop images here or click to browse</p>
+                            <input type="file" id="imageUpload" name="images" accept="image/*" multiple>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2" name="layout" value="dual">Dual Layout</button>
+                    <button type="submit" class="btn btn-secondary mt-2" name="layout" value="single">Single Layout</button>
+                </form>
+                <script>
+    document.getElementById('dual-layout-btn').addEventListener('click', function() {
+        document.getElementById('layout').value = 'dual';
+    });
+</script>
+            </article>
+            <article class="col-md-6">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2>Text Generated</h2>
+                    <div>
+                        <button class="btn btn-primary" onclick="copyToClipboard()">Copy to Clipboard</button>
+                        <button class="btn btn-warning ml-2" data-toggle="modal" data-target="#exportModal">Export</button>
+                    </div>
+                </div>
+                <div class="p-3 bg-light border scrollable" id="generatedText">
+                    {% if extracted_texts %}
+                        <pre id="currentText">{{ extracted_texts[current_index] }}</pre>
+                    {% else %}
+                        <p>Extracted text will appear here after submission.</p>
+                    {% endif %}
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-secondary" id="prevImage" onclick="navigate(-1)" {% if current_index == 0 %}disabled{% endif %}>Previous</button>
+                    <button class="btn btn-secondary" id="nextImage" onclick="navigate(1)" {% if current_index == image_urls | length - 1 %}disabled{% endif %}>Next</button>
+                </div>
+            </article>
+        </section>
+    </main>
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1" role="dialog" aria-labelledby="exportModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exportModalLabel">Export Options</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-primary btn-block" onclick="exportText('json')">Export as JSON</button>
+                    <button class="btn btn-primary btn-block mt-2" onclick="exportText('txt')">Export as TXT</button>
+                    <button class="btn btn-primary btn-block mt-2" onclick="exportText('docx')">Export as DOCX</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        let currentIndex = {{ current_index | default(0) }};
+        const imageUrls = {{ image_urls | tojson }};
+        const extractedTexts = {{ extracted_texts | tojson }};
+        const totalImages = imageUrls.length;
+
+        function navigate(direction) {
+            currentIndex = (currentIndex + direction + totalImages) % totalImages;
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            if (totalImages > 0) {
+                document.getElementById('currentImage').src = imageUrls[currentIndex];
+                document.getElementById('currentText').textContent = extractedTexts[currentIndex];
+                document.getElementById('prevImage').disabled = (currentIndex === 0);
+                document.getElementById('nextImage').disabled = (currentIndex === totalImages - 1);
+            }
+        }
+
+        function copyToClipboard() {
+            const textElement = document.getElementById('currentText');
+            const range = document.createRange();
+            range.selectNodeContents(textElement);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            try {
+                document.execCommand('copy');
+                alert('Text copied to clipboard!');
+            } catch (err) {
+                alert('Failed to copy text');
+            }
+            selection.removeAllRanges();
+        }
+
+        function exportText(format) {
+            const text = document.getElementById('currentText').textContent;
+            let blob;
+            let filename = `exported-text.${format}`;
+
+            switch (format) {
+                case 'json':
+                    blob = new Blob([JSON.stringify({ text })], { type: 'application/json' });
+                    break;
+                case 'txt':
+                    blob = new Blob([text], { type: 'text/plain' });
+                    break;
+                case 'docx':
+                    blob = new Blob([text], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                    break;
+                default:
+                    alert('Unsupported format');
+                    return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // Drag and Drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('imageUpload');
+        const uploadedImages = document.getElementById('uploadedImages');
+
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function() {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        uploadArea.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function() {
+            const files = fileInput.files;
+            handleFiles(files);
+        });
+
+        function handleFiles(files) {
+            uploadedImages.innerHTML = ''; // Clear previous previews
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const reader = new FileReader();
+
+                reader.onload = function(event) {
+                    const img = document.createElement('img');
+                    img.src = event.target.result;
+                    img.classList.add('uploaded-img');
+                    img.classList.add('image-preview');
+                    uploadedImages.appendChild(img);
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
